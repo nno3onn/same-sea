@@ -17,8 +17,9 @@
   </div>
 </div>
 <style>
-  #same-sea-v2{width:100%;font-family:system-ui,-apple-system,sans-serif}
-  #same-sea-v2 .world{position:relative;width:100%;aspect-ratio:16/9;min-height:0;overflow:hidden;border-radius:12px;background:#243a58;color:#fff;touch-action:none}
+  html,body{width:100%;height:100%;margin:0;overflow:hidden}
+  #same-sea-v2{width:100%;height:100vh;height:100dvh;font-family:system-ui,-apple-system,sans-serif}
+  #same-sea-v2 .world{position:relative;width:100%;height:100%;overflow:hidden;background:#243a58;color:#fff;touch-action:none}
   #same-sea-v2 .viewport,#same-sea-v2 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   #same-sea-v2 .hud-top{position:absolute;left:24px;right:24px;top:19px;display:flex;align-items:center;justify-content:space-between;gap:16px;text-shadow:0 2px 8px #172738;font-size:14px;pointer-events:none}
   #same-sea-v2 .brand{display:flex;flex-direction:column;gap:2px}
@@ -34,7 +35,7 @@
   #same-sea-v2 .pad button{width:44px;padding:0;font-size:18px}
   #same-sea-v2 .actions{display:flex;justify-content:end;flex-wrap:wrap;gap:7px}
   #same-sea-v2 .error{position:absolute;inset:40% 15%;text-align:center}
-  @media(max-width:600px){#same-sea-v2 .keyboard-hint{display:none}#same-sea-v2 .world{aspect-ratio:3/4;min-height:0}#same-sea-v2 .hud-top{left:15px;right:15px;top:13px}#same-sea-v2 .hud-bottom{left:9px;right:9px;bottom:10px;gap:4px}#same-sea-v2 .actions{max-width:50%}#same-sea-v2 .actions button{font-size:12px;padding:7px 9px}}
+  @media(max-width:600px){#same-sea-v2 .keyboard-hint{display:none}#same-sea-v2 .hud-top{left:15px;right:15px;top:max(13px,env(safe-area-inset-top))}#same-sea-v2 .hud-bottom{left:9px;right:9px;bottom:max(10px,env(safe-area-inset-bottom));gap:4px}#same-sea-v2 .actions{max-width:50%}#same-sea-v2 .actions button{font-size:12px;padding:7px 9px}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
@@ -61,16 +62,16 @@
   const filmMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,uniforms:{time:{value:0},light:{value:1},waves:{value:waveState}},vertexShader:'varying vec2 beach;void main(){vec4 w=modelMatrix*vec4(position,1.0);beach=w.xz;gl_Position=projectionMatrix*viewMatrix*w;}',fragmentShader:'uniform float time;uniform float light;uniform vec4 waves[3];varying vec2 beach;void main(){float film=0.0;for(int i=0;i<3;i++){vec4 w=waves[i];float age=w.z;float passing=smoothstep(3.8,6.6,age)*(1.0-smoothstep(8.2,11.8,age));float edge=w.x+1.0+.32*sin(beach.x*.16+float(i)*2.1+time*.18)+.12*sin(beach.x*.42-time*.3);float reach=smoothstep(-.22,.1,beach.y)*(1.0-smoothstep(edge-.42,edge+.2,beach.y));film=max(film,passing*reach);}if(film<.015)discard;float ripple=.5+.5*sin(beach.x*2.4+beach.y*5.2-time*1.4+sin(beach.x*.7)*1.2);float glint=pow(ripple,14.0)*(.14+.23*light);vec3 color=mix(vec3(.27,.45,.47),vec3(.91,.95,.90),glint);gl_FragColor=vec4(color,film*(.26+.11*glint));}'});const film=new T.Mesh(new T.PlaneGeometry(100,7),filmMaterial);film.rotation.x=-Math.PI/2;film.position.set(0,.075,2.4);film.renderOrder=1.5;scene.add(film);
   const waterUniforms={time:{value:0},deep:{value:new T.Color(0x174c66)},shallow:{value:new T.Color(0x3c9aaa)},foam:{value:new T.Color(0xc5dfdb)}};
   const water=new T.Mesh(new T.PlaneGeometry(130,300,100,120),new T.ShaderMaterial({uniforms:waterUniforms,side:T.DoubleSide,vertexShader:'uniform float time; varying vec3 wp; void main(){vec3 p=position; float w=sin(p.x*.23+sin(p.y*.11+time*.6)+time*.8)*.12+sin(p.y*.33+sin(p.x*.09)-time*.9)*.08; p.z=w; wp=p; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}',fragmentShader:'uniform vec3 deep;uniform vec3 shallow;uniform vec3 foam;uniform float time;varying vec3 wp;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){float edge=1.0-smoothstep(-150.0,-126.0,wp.y);float shore=-149.35+sin(wp.x*.24+time*.7)*.28+sin(wp.x*.55-time*.9)*.12;if(wp.y<shore)discard;float n=hash(floor((wp.xy+time*.05)*1.7));float ripple=sin(wp.x*.16+sin(wp.y*.13+time*.7))*.018;vec3 c=mix(deep,shallow,.15+edge*.7+ripple);float sparkle=step(.996,n)*.12;c=mix(c,foam,sparkle);gl_FragColor=vec4(c,1.0);}'}));water.rotation.x=-Math.PI/2;water.position.set(0,-.09,-149.8);scene.add(water);
-  let premiumWater=null;(async()=>{try{const {Water}=await import('https://cdn.jsdelivr.net/npm/three@0.149.0/examples/jsm/objects/Water.js/+esm');const normals=await new Promise((resolve,reject)=>new T.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r149/examples/textures/waternormals.jpg',resolve,undefined,reject));normals.wrapS=normals.wrapT=T.RepeatWrapping;premiumWater=new Water((()=>{const g=new T.PlaneGeometry(130,300,120,240),p=g.attributes.position;for(let i=0;i<p.count;i++){const u=(p.getY(i)+150)/300;p.setY(i,-151.3+301.3*u*u);}p.needsUpdate=true;g.computeVertexNormals();return g;})(),{textureWidth:512,textureHeight:512,waterNormals:normals,sunDirection:key.position.clone().normalize(),sunColor:0xffe8c6,waterColor:0x245e73,distortionScale:3.4,fog:false});premiumWater.material.uniforms.waves={value:waveState};
+  let premiumWater=null;(async()=>{try{const {Water}=await import('https://cdn.jsdelivr.net/npm/three@0.149.0/examples/jsm/objects/Water.js/+esm');const normals=await new Promise((resolve,reject)=>new T.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r149/examples/textures/waternormals.jpg',resolve,undefined,reject));normals.wrapS=normals.wrapT=T.RepeatWrapping;premiumWater=new Water((()=>{const g=new T.PlaneGeometry(130,300,120,240),p=g.attributes.position;for(let i=0;i<p.count;i++){const u=(p.getY(i)+150)/300;p.setY(i,-151.3+301.3*u*u);}p.needsUpdate=true;g.computeVertexNormals();return g;})(),{textureWidth:512,textureHeight:512,waterNormals:normals,sunDirection:key.position.clone().normalize(),sunColor:0xffe8c6,waterColor:0x245e73,distortionScale:3.4,fog:false});premiumWater.material.uniforms.waves={value:waveState};premiumWater.material.uniforms.horizonTint={value:skyMaterial.uniforms.horizon.value};
   premiumWater.material.vertexShader=premiumWater.material.vertexShader
     .replace('varying vec4 worldPosition;','varying vec4 worldPosition; varying vec3 geomNormal;')
     .replace('worldPosition = mirrorCoord.xyzw;','worldPosition = mirrorCoord.xyzw; geomNormal=normalize(mat3(modelMatrix)*normal);');
   premiumWater.material.fragmentShader=premiumWater.material.fragmentShader
     .replace('varying vec4 worldPosition;','varying vec4 worldPosition; varying vec3 geomNormal;')
-    .replace('uniform vec3 waterColor;','uniform vec3 waterColor; uniform vec4 waves[3];')
+    .replace('uniform vec3 waterColor;','uniform vec3 waterColor; uniform vec3 horizonTint; uniform vec4 waves[3];')
     .replace(/vec3 surfaceNormal = normalize\(\s*noise\.xzy \* vec3\(\s*1\.5,\s*1\.0,\s*1\.5\s*\)\s*\);/,'vec3 surfaceNormal=normalize(geomNormal+noise.xzy*vec3(.55,.35,.55));')
     .replace('vec3 outgoingLight = albedo;',`float face=smoothstep(-11.0,-3.0,worldPosition.z)*smoothstep(.12,.65,1.0-geomNormal.y);
-      vec3 outgoingLight=mix(albedo,vec3(.24,.53,.57),face*.55);
+      vec3 outgoingLight=mix(albedo,vec3(.31,.57,.62),face*.68);
       float foamMask=0.0;
       for(int i=0;i<3;i++){
         vec4 w=waves[i];float t=time*4.0;
@@ -78,13 +79,17 @@
         float d=worldPosition.z-(w.x+warp);
         float n0=texture2D(normalSampler,worldPosition.xz*.13+vec2(time*.045,-time*.027)).r;
         float n1=texture2D(normalSampler,worldPosition.zx*.29+vec2(-time*.028,time*.053)).g;
-        float lace=smoothstep(.41,.66,n0*.65+n1*.35);
-        float crest=exp(-pow(d/.46,2.0))*w.w*(.12+.88*lace);
-        float breaking=smoothstep(4.7,6.1,w.z)*(1.0-smoothstep(8.1,10.3,w.z));
-        float wake=exp(-pow((d+1.05)/1.3,2.0))*breaking*w.w*(.13+.87*lace)*1.05;
-        foamMask=max(foamMask,crest*.52+wake);
+        float n2=texture2D(normalSampler,worldPosition.xz*.47+vec2(-time*.092,time*.066)).b;
+        float broad=smoothstep(.43,.66,n0*.58+n1*.42);
+        float lace=smoothstep(.39,.67,n1*.39+n2*.61);
+        float collapsing=smoothstep(3.8,5.5,w.z)*(1.0-smoothstep(7.5,9.6,w.z));
+        float crest=exp(-pow(d/(.29+.22*n0),2.0))*w.w*(.05+.95*broad)*(.52+.48*lace);
+        float churn=exp(-pow((d+1.0)/1.65,2.0))*collapsing*w.w*(.13+.87*lace)*(.35+.65*broad);
+        float foamFingers=exp(-pow((d+2.2)/2.1,2.0))*collapsing*w.w*pow(lace,2.0)*.27;
+        foamMask=max(foamMask,crest*.55+churn*1.2+foamFingers);
       }
-      outgoingLight=mix(outgoingLight,vec3(1.16,1.22,1.19),clamp(foamMask*.94,0.0,.88));`);
+      outgoingLight=mix(outgoingLight,vec3(1.16,1.22,1.19),clamp(foamMask,0.0,.9));
+      outgoingLight=mix(outgoingLight,horizonTint,smoothstep(78.0,145.0,-worldPosition.z)*.94);`);
   premiumWater.rotation.x=-Math.PI/2;premiumWater.position.set(0,-.08,-149.8);scene.add(premiumWater);water.visible=false;updateTime();}catch(e){}})();const surfMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,uniforms:{time:{value:0},light:{value:1},waves:{value:waveState}},vertexShader:'varying vec2 beach;void main(){vec4 w=modelMatrix*vec4(position,1.0);beach=w.xz;gl_Position=projectionMatrix*viewMatrix*w;}',fragmentShader:'uniform float time;uniform float light;uniform vec4 waves[3];varying vec2 beach;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}void main(){float foam=0.0;float mist=0.0;for(int i=0;i<3;i++){vec4 w=waves[i];float age=w.z,activity=w.w;float warp=.58*sin(beach.x*.12+float(i)*2.1+time*.18)+.23*sin(beach.x*.38-time*.31)+.085*sin(beach.x*1.17+time*.55);float front=w.x+warp;float d=beach.y-front;float cells=.68*noise(vec2(beach.x*2.9+float(i)*7.0,beach.y*4.5)+time*.12)+.32*noise(vec2(beach.x*7.7,beach.y*9.1)-time*.17);float lace=.5+.5*sin(beach.x*5.1+sin(beach.y*3.7-time*.6)*2.4);float breakMask=smoothstep(.31,.69,lace*.55+cells*.45);float crest=exp(-pow(d/(.18+.05*w.y),2.0))*breakMask*activity;float froth=exp(-pow((d+.30)/(.52+.11*w.y),2.0))*smoothstep(.45,.72,cells)*activity*.48;float fragments=exp(-pow((d-.36)/.75,2.0))*smoothstep(.57,.76,cells)*activity*.27;float residue=smoothstep(6.0,7.3,age)*(1.0-smoothstep(8.8,12.2,age));float shorePatch=exp(-pow((beach.y-(.25+.3*w.y+warp*.38))/.48,2.0))*smoothstep(.51,.73,cells)*residue*.26;foam=max(foam,max(crest+froth+fragments,shorePatch)*(.82+.18*w.y));mist=max(mist,exp(-pow((d+.75)/1.2,2.0))*activity*.08);}float alpha=clamp(foam*.94+mist*.5,0.0,.82)*(.64+.36*light);if(alpha<.016)discard;vec3 color=mix(vec3(.70,.82,.81),vec3(.985,.99,.965),clamp(foam*1.8,0.0,1.0));gl_FragColor=vec4(color,alpha);}'});const surf=new T.Mesh(new T.PlaneGeometry(92,21),surfMaterial);surf.rotation.x=-Math.PI/2;surf.position.set(0,.11,-6);surf.renderOrder=3;scene.add(surf);
     const breakers=[];for(const spec of waveSpecs){
     const cols=220,rows=28,positions=new Float32Array((cols+1)*(rows+1)*3),uvs=[],indices=[];
@@ -100,11 +105,11 @@
       void main(){
         float macro=noise(vec2(vUv.x*22.0+time*.08,1.3));
         float detail=noise(vec2(vUv.x*119.0-time*.17,vUv.y*15.0+time*.32));
-        float burst=smoothstep(.31,.7,macro*.64+detail*.36);
+        float burst=smoothstep(.44,.72,macro*.64+detail*.36);
         float crest=exp(-pow((vUv.y-.68)/.115,2.0));
         float torn=exp(-pow((vUv.y-.82)/.16,2.0))*smoothstep(.50,.78,detail);
         float streak=exp(-pow((vUv.y-.44)/.2,2.0))*smoothstep(.43,.68,detail)*.38;
-        float white=(crest*(.22+.78*burst)+torn*.58+streak)*life;
+        float white=(crest*(.04+.96*burst)+torn*.58+streak)*life;
         float face=exp(-pow((vUv.y-.60)/.31,2.0))*life;
         float alpha=(face*.31+white*.72)*sin(vUv.y*3.14159);
         if(alpha<.015)discard;
@@ -159,7 +164,7 @@ const hem=new T.Mesh(new T.TorusGeometry(hemR*.88,.018,6,32),trim);hem.rotation.
 const footprints=[],footMat=new T.MeshBasicMaterial({color:0x4e3f36,transparent:true,opacity:.64,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1});const footGeo=new T.CircleGeometry(.16,12);
   function foot(x,z,heading,side){const mark=new T.Group();mark.position.set(x+side*.18,.075,z);mark.rotation.y=heading;const sole=new T.Mesh(footGeo,footMat);sole.rotation.x=-Math.PI/2;sole.scale.set(.72,1.32,1);mark.add(sole);for(let i=0;i<4;i++){const toe=new T.Mesh(new T.CircleGeometry(.028+(3-i)*.007,8),footMat);toe.rotation.x=-Math.PI/2;toe.position.set((i-1.5)*.055,.002,-.22+(i===0?.035:0));mark.add(toe);}scene.add(mark);footprints.push(mark);if(footprints.length>160)scene.remove(footprints.shift());}
   for(const [x,z] of [[-3.6,2.2],[3.5,2.4],[7.6,5.4]])for(let k=0;k<10;k++)foot(x+Math.sin(k*.4)*.1,z+k*.44,0,k%2?1:-1);
-  const hearts=[];function drawHeart(x,z,heading){const pts=[];for(let i=0;i<=64;i++){const t=i/64*Math.PI*2;pts.push(new T.Vector3(Math.pow(Math.sin(t),3)*.67,.115,-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*.038));}const curve=new T.CatmullRomCurve3(pts),group=new T.Group();const geo=new T.TubeGeometry(curve,112,.065,6,false);geo.setDrawRange(0,0);const stroke=new T.Mesh(geo,new T.MeshBasicMaterial({color:0x100b08,toneMapped:false,depthTest:true,depthWrite:false}));stroke.renderOrder=5;group.add(stroke);group.position.set(x,0,z);group.rotation.y=heading;scene.add(group);hearts.push({mesh:group,t:performance.now()});}
+  const hearts=[];function drawHeart(x,z,heading){const pts=[];for(let i=0;i<=64;i++){const t=i/64*Math.PI*2;pts.push(new T.Vector3(Math.pow(Math.sin(t),3)*.67,.115,-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*.038));}const curve=new T.CatmullRomCurve3(pts),group=new T.Group();const geo=new T.TubeGeometry(curve,112,.065,6,false);geo.setDrawRange(0,0);const stroke=new T.Mesh(geo,footMat);stroke.renderOrder=5;group.add(stroke);group.position.set(x,0,z);group.rotation.y=heading;scene.add(group);hearts.push({mesh:group,t:performance.now()});}
   function resize(){camera.aspect=stage.clientWidth/stage.clientHeight;camera.updateProjectionMatrix();renderer.setSize(stage.clientWidth,stage.clientHeight,false);}new ResizeObserver(resize).observe(stage);resize();
   const shorelineZ=.55,keys=new Set();let target=null,sitting=false,stepDistance=0,stepSide=1;
   root.querySelectorAll('[data-dir]').forEach(b=>{const d=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(d);b.setPointerCapture(e.pointerId);});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys.delete(d)));});
@@ -171,7 +176,7 @@ const footprints=[],footMat=new T.MeshBasicMaterial({color:0x4e3f36,transparent:
   const ray=new T.Raycaster(),p2=new T.Vector2();
   const canvas=renderer.domElement;canvas.tabIndex=0;canvas.setAttribute('aria-label','3D 바닷가. WASD 또는 방향키로 이동');canvas.style.outline='none';stage.addEventListener('pointerdown',()=>canvas.focus({preventScroll:true}),true);
   let orbiting=false,orbitPointer=null,orbitYaw=.22,orbitPitch=stage.clientWidth<600?.34:.46,lastLookX=0,lastLookY=0;
-  let zoomDistance=stage.clientWidth<600?13.5:6.7;
+  let zoomDistance=stage.clientWidth<600?13.5:6.7*Math.sqrt(Math.max(1,1.78/(stage.clientWidth/stage.clientHeight)));
   stage.addEventListener('wheel',e=>{e.preventDefault();const unit=e.deltaMode===1?16:e.deltaMode===2?stage.clientHeight:1;const narrow=stage.clientWidth<600;zoomDistance=T.MathUtils.clamp(zoomDistance*Math.exp(e.deltaY*unit*.0012),narrow?6.5:3.4,narrow?20:16);},{passive:false});
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('pointermove',e=>{if(!orbiting||e.pointerId!==orbitPointer)return;orbitYaw-=(e.clientX-lastLookX)*.004;orbitPitch=T.MathUtils.clamp(orbitPitch+(e.clientY-lastLookY)*.0035,.12,.9);lastLookX=e.clientX;lastLookY=e.clientY;});
@@ -179,7 +184,7 @@ const footprints=[],footMat=new T.MeshBasicMaterial({color:0x4e3f36,transparent:
   canvas.addEventListener('pointerup',stopOrbit);canvas.addEventListener('pointercancel',stopOrbit);canvas.addEventListener('lostpointercapture',stopOrbit);
   canvas.addEventListener('pointerdown',e=>{if(e.button===2){e.preventDefault();orbiting=true;orbitPointer=e.pointerId;lastLookX=e.clientX;lastLookY=e.clientY;target=null;canvas.setPointerCapture(e.pointerId);return;}if(e.button!==0)return;const b=canvas.getBoundingClientRect();p2.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);ray.setFromCamera(p2,camera);const hit=ray.intersectObject(sand)[0];if(hit){target=hit.point.clone();target.x=T.MathUtils.clamp(target.x,-22,22);target.z=T.MathUtils.clamp(target.z,shorelineZ,27);sitting=false;root.querySelector('.sit').textContent='앉기';}});
   root.querySelector('.sit').addEventListener('click',()=>{sitting=!sitting;target=null;root.querySelector('.sit').textContent=sitting?'일어나기':'앉기';player.children.forEach(c=>c.visible=c===playerSeat?sitting:!sitting);});
-  const heartButton=root.querySelector('.heart');let heartLabelTimer;heartButton.addEventListener('click',()=>{const heading=player.rotation.y;drawHeart(player.position.x-Math.sin(heading)*.78,Math.max(1.4,player.position.z-Math.cos(heading)*.78),heading);heartButton.textContent='하트 남김 ✓';clearTimeout(heartLabelTimer);heartLabelTimer=setTimeout(()=>heartButton.textContent='하트 그리기',1600);});
+  const heartButton=root.querySelector('.heart');let heartLabelTimer;heartButton.addEventListener('click',()=>{const heading=player.rotation.y;drawHeart(player.position.x-Math.sin(heading)*1.4,Math.max(1.4,player.position.z-Math.cos(heading)*1.4),heading);heartButton.textContent='하트 남김 ✓';clearTimeout(heartLabelTimer);heartLabelTimer=setTimeout(()=>heartButton.textContent='하트 그리기',1600);});
   const audio=new Audio('assets/seaside-ambience.mp3');audio.loop=true;audio.volume=.34;const soundButton=root.querySelector('.sound');soundButton.addEventListener('click',()=>{if(audio.paused){audio.play();soundButton.textContent='파도 소리 끄기';}else{audio.pause();soundButton.textContent='파도 소리 켜기';}});let surfCtx=null,surfGain=null;function initSurfAudio(){if(surfCtx)return;const AudioContextClass=window.AudioContext||window.webkitAudioContext;if(!AudioContextClass)return;surfCtx=new AudioContextClass();const length=surfCtx.sampleRate*3,buffer=surfCtx.createBuffer(1,length,surfCtx.sampleRate),data=buffer.getChannelData(0);let low=0;for(let i=0;i<length;i++){low=(low+(Math.random()*2-1)*.12)/1.1;data[i]=low*.85;}const source=surfCtx.createBufferSource(),filter=surfCtx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=1050;source.buffer=buffer;source.loop=true;surfGain=surfCtx.createGain();surfGain.gain.value=0;source.connect(filter);filter.connect(surfGain);surfGain.connect(surfCtx.destination);source.start();}soundButton.addEventListener('click',()=>{try{if(soundButton.textContent.includes('끄기')){initSurfAudio();surfCtx?.resume();}else surfCtx?.suspend();}catch(e){}});
   const weather={known:false,cloud:0,rain:0,snow:0,visualRain:0,visualSnow:0,lastUpdated:0};
   const rainDrops=Array.from({length:520},()=>({x:(rand()-.5)*29,z:(rand()-.5)*24-2,y:rand()*8,speed:6+rand()*6,length:.30+rand()*.34}));
@@ -296,8 +301,9 @@ const footprints=[],footMat=new T.MeshBasicMaterial({color:0x4e3f36,transparent:
     renderer.toneMappingExposure=.58+.32*ambient+.07*warm-cloud*.07;
   }
   updateTime();setInterval(updateTime,15000);fetchWeather();setInterval(fetchWeather,10*60000);
-  const timer=new T.Clock();let elapsed=0;function frame(){const dt=Math.min(timer.getDelta(),.05);elapsed+=dt;stars.material.uniforms.time.value=elapsed;updatePrecipitation(dt);waterUniforms.time.value=elapsed;if(premiumWater){premiumWater.material.uniforms.time.value=elapsed*.25;const pos=premiumWater.geometry.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i),near=1-T.MathUtils.clamp((y+150)/300,0,1);let shoreRidge=0;const worldZ=-149.8-y;for(let wi=0;wi<3;wi++){const w=waveState[wi],warp=.58*Math.sin(x*.12+wi*2.1+elapsed*.18)+.23*Math.sin(x*.38-elapsed*.31)+.085*Math.sin(x*1.17+elapsed*.55),d=worldZ-(w.x+warp);if(d>-5&&d<2){const span=d>0?1.05:2.5;shoreRidge=Math.max(shoreRidge,w.w*w.y*Math.exp(-Math.pow(d/span,2))*.62);}}pos.setZ(i,(Math.sin(y*.23+elapsed*1.05+x*.045+Math.sin(x*.17+elapsed*.21)*1.3+Math.sin(y*.07-x*.09)*.7)*.16+Math.sin(y*.53-elapsed*1.6+x*.16+Math.sin(x*.29-y*.10)*.8)*.055+Math.sin(y*.105+elapsed*.48+x*.075)*.085)*(.6+near*.4)+shoreRidge);}pos.needsUpdate=true;premiumWater.geometry.computeVertexNormals();}wetMaterial.uniforms.time.value=elapsed;filmMaterial.uniforms.time.value=elapsed;surfMaterial.uniforms.time.value=elapsed;let waveLoudness=0;for(let wi=0;wi<breakers.length;wi++){const breaker=breakers[wi],spec=breaker.spec,age=(elapsed+spec.offset)%18,advance=Math.min(age,7.2),front=age<=7.2?-6.8+advance*1.1:1.12-(age-7.2)*.95,active=T.MathUtils.smoothstep(age,.35,1.3)*(1-T.MathUtils.smoothstep(age,7.6,9.8));waveState[wi].set(front,spec.strength,age,active);breaker.material.uniforms.life.value=active*spec.strength;breaker.material.uniforms.time.value=elapsed;waveLoudness=Math.max(waveLoudness,active*spec.strength*Math.exp(-Math.pow((front+.35)/1.55,2)));const {cols,rows,positions,geo}=breaker;
-      const breaking=T.MathUtils.smoothstep(age,3.7,6.3);
+  const timer=new T.Clock();let elapsed=0;function frame(){const dt=Math.min(timer.getDelta(),.05);elapsed+=dt;stars.material.uniforms.time.value=elapsed;updatePrecipitation(dt);waterUniforms.time.value=elapsed;if(premiumWater){premiumWater.material.uniforms.time.value=elapsed*.25;const pos=premiumWater.geometry.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i),near=1-T.MathUtils.clamp((y+150)/300,0,1);let shoreRidge=0;const worldZ=-149.8-y;for(let wi=0;wi<3;wi++){const w=waveState[wi],warp=.58*Math.sin(x*.12+wi*2.1+elapsed*.18)+.23*Math.sin(x*.38-elapsed*.31)+.085*Math.sin(x*1.17+elapsed*.55),d=worldZ-(w.x+warp);if(d>-5&&d<2){const span=d>0?1.05:2.5,collapse=1-.82*T.MathUtils.smoothstep(w.z,5.1,7.4);shoreRidge=Math.max(shoreRidge,w.w*w.y*Math.exp(-Math.pow(d/span,2))*.62*collapse);}}pos.setZ(i,(Math.sin(y*.23+elapsed*1.05+x*.045+Math.sin(x*.17+elapsed*.21)*1.3+Math.sin(y*.07-x*.09)*.7)*.16+Math.sin(y*.53-elapsed*1.6+x*.16+Math.sin(x*.29-y*.10)*.8)*.055+Math.sin(y*.105+elapsed*.48+x*.075)*.085)*(.6+near*.4)+shoreRidge);}pos.needsUpdate=true;premiumWater.geometry.computeVertexNormals();}wetMaterial.uniforms.time.value=elapsed;filmMaterial.uniforms.time.value=elapsed;surfMaterial.uniforms.time.value=elapsed;let waveLoudness=0;for(let wi=0;wi<breakers.length;wi++){const breaker=breakers[wi],spec=breaker.spec,age=(elapsed+spec.offset)%18,advance=Math.min(age,7.2),front=age<=7.2?-6.8+advance*1.1:1.12-(age-7.2)*.95,active=T.MathUtils.smoothstep(age,.35,1.3)*(1-T.MathUtils.smoothstep(age,7.6,9.8));waveState[wi].set(front,spec.strength,age,active);breaker.material.uniforms.life.value=active*spec.strength;breaker.material.uniforms.time.value=elapsed;waveLoudness=Math.max(waveLoudness,active*spec.strength*Math.exp(-Math.pow((front+.35)/1.55,2)));const {cols,rows,positions,geo}=breaker;
+      const breaking=T.MathUtils.smoothstep(age,3.7,5.7)*(1-T.MathUtils.smoothstep(age,6.3,8));
+      const heightFade=1-.72*T.MathUtils.smoothstep(age,5.1,7.4);
       for(let row=0;row<=rows;row++){
         const t=row/rows;
         const shoulder=Math.exp(-Math.pow((t-.40)/.29,2))*.21;
@@ -306,12 +312,12 @@ const footprints=[],footMat=new T.MeshBasicMaterial({color:0x4e3f36,transparent:
         const curl=Math.exp(-Math.pow((t-.73)/.12,2))*breaking;
         for(let col=0;col<=cols;col++){
           const x=-50+100*col/cols;
-          const macro=.5+.5*Math.sin(x*.19+spec.offset*.4+elapsed*.17)*Math.sin(x*.085-spec.offset*.3);
-          const variation=.62+.38*macro;
+          const macro=.5+.5*Math.sin(x*.7+spec.offset*.4+elapsed*.17)*Math.sin(x*.23-spec.offset*.3);
+          const variation=.38+.62*macro;
           const frontX=front+.58*Math.sin(x*.12+spec.offset/6*2.1+elapsed*.18)+.23*Math.sin(x*.38-elapsed*.31)+.085*Math.sin(x*1.17+elapsed*.55);
           const at=(row*(cols+1)+col)*3;
           positions[at]=x;
-          positions[at+1]=-.035+active*spec.strength*(shoulder+crest+face)*variation+.025*Math.sin(x*.37+elapsed*1.4)*Math.sin(t*Math.PI);
+          positions[at+1]=-.035+active*spec.strength*(shoulder+crest+face)*variation*heightFade+.025*Math.sin(x*.37+elapsed*1.4)*Math.sin(t*Math.PI);
           positions[at+2]=frontX+(t-.5)*2.1+curl*spec.strength*.46*variation;
         }
       }
