@@ -60,7 +60,7 @@ export function connectSea({ getPose, onPeople, onMove, onGesture, onStatus, onA
       if (validId(payload?.id) && peers.has(payload.id) && validPose(payload.pose)) onMove(payload.id, cleanPose(payload.pose));
     });
     channel.on('broadcast', { event: 'gesture' }, ({ payload }) => {
-      if (validId(payload?.id) && peers.has(payload.id) && ['heart', 'wave'].includes(payload.kind) && validPose(payload.pose)) onGesture(payload.id, payload.kind, cleanPose(payload.pose));
+      if (validId(payload?.id) && peers.has(payload.id) && payload.kind === 'heart' && validPose(payload.pose)) onGesture(payload.id, payload.kind, cleanPose(payload.pose));
     });
     channel.subscribe(async next => {
       if (disposed || !active) return;
@@ -94,7 +94,7 @@ export function connectSea({ getPose, onPeople, onMove, onGesture, onStatus, onA
   window.addEventListener('pagehide', unloading);
   join();
   return {
-    sendGesture(kind) { if (active && status === 'connected' && ['heart', 'wave'].includes(kind)) channel.send({ type: 'broadcast', event: 'gesture', payload: { id: deviceId, kind, pose: cleanPose(getPose()) } }); },
+    sendGesture(kind) { if (active && status === 'connected' && kind === 'heart') channel.send({ type: 'broadcast', event: 'gesture', payload: { id: deviceId, kind, pose: cleanPose(getPose()) } }); },
     updatePose() { if (active && status === 'connected') { const pose = cleanPose(getPose()); lastPose = JSON.stringify(pose); lastSent = Date.now(); channel.send({ type: 'broadcast', event: 'move', payload: { id: deviceId, pose } }); } },
     dispose() { disposed = true; clearInterval(pulse); window.removeEventListener('storage', storage); window.removeEventListener('pagehide', unloading); unloading(); }
   };
